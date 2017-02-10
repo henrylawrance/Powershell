@@ -1,0 +1,1 @@
+Quick script to reset permissions in all users home directories. 
