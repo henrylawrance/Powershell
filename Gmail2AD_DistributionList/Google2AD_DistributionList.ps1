@@ -9,11 +9,12 @@ Import-PSSession $Session
 $domain = "domain.com"
 $gam_path = '\\servername\c$\gam\gam.exe'
 $ou_path = "CN=Users,DC=domain,dc=com"
+$tag = "Created from Google"
 
 $groups = (& $gam_path print groups) | ? { $_ -match "@$($domain)" } | % { $_.split('@')[0] }
 
 foreach($group in $groups) {
-    if(Get-ADGroup -filter {samAccountName -eq $group}) {
+    if(Get-ADGroup -filter {samAccountName -eq $group -and groupCategory -eq "Distribution"}) {
         #group exists
         #purge old members
         Get-ADGroupMember $group | % { Remove-ADGroupMember -identity $group -members $_.SamAccountName -Confirm:$false } 
@@ -29,7 +30,7 @@ foreach($group in $groups) {
         $description = ($group_info | ? { $_ -match "Description:" }).split(":")[1]
         $display_name = ($group_info | ? { $_ -match "name:" }).split(":")[1]
         #create ad group
-        New-ADGroup -Name $display_name.trim() -SamAccountName $group -GroupCategory Distribution -GroupScope Universal -DisplayName $display_name.trim() -Path $ou_path -Description $description.trim()
+        New-ADGroup -Name $display_name.trim() -SamAccountName $group -GroupCategory Distribution -GroupScope Universal -DisplayName $display_name.trim() -Path $ou_path -Description $description.trim() -OtherAttributes @{Info=$tag}
         #add members from google
         $members = (& $gam_path print group-members group $group) | 
             ? { $_ -match 'ACTIVE'} | 
